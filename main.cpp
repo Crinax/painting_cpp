@@ -417,7 +417,7 @@ namespace Window {
 					if (this->selected_figure != -1) {
 						this->figures[this->selected_figure].deselect();
 					}
-					
+
 					this->selected_figure = this->active_figure;
 				}
 				
@@ -495,8 +495,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 				Window::Figure figure = mainScene.getFigure(i);
 				HPEN active_pen = CreatePen(PS_SOLID, 5, RGB(255, 0, 0));
 				HPEN nonactive_pen = CreatePen(PS_SOLID, 1, RGB(255, 0, 0));
-				HPEN active_selected_pen = CreatePen(PS_SOLID, 5, RGB(0, 255, 0));
-				HPEN nonactive_selected_pen = CreatePen(PS_SOLID, 1, RGB(0, 255, 0));
+				HPEN active_selected_pen = CreatePen(PS_SOLID, 5, RGB(0, 0, 255));
+				HPEN nonactive_selected_pen = CreatePen(PS_SOLID, 1, RGB(0, 0, 255));
 
 				if (figure.is_initialized) {
 					if (figure.isVisible()) {
