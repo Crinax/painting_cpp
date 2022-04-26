@@ -618,6 +618,20 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 					
 					break;
 				}
+
+				case VK_DELETE: {
+					try {
+						mainScene.hideActiveFigure();
+					} catch (const std::exception& err) {
+						std::cout << err.what() << std::endl;
+					}
+					
+					GetClientRect(hwnd, &rect);
+					InvalidateRect(hwnd, &rect, -1);
+					UpdateWindow(hwnd);
+					
+					break;
+				}
 			}
 
 			break;
