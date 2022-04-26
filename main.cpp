@@ -120,6 +120,11 @@ namespace Window {
 				return this->is_active;
 			}
 
+			// Returns true if this figure is selected
+			bool isSelected() {
+				return this->is_selected;
+			}
+
 			/*!
 				\brief Set circle radius
 				\param [in] radius {New radius of the figure}
@@ -168,6 +173,16 @@ namespace Window {
 				this->is_active = true;
 			}
 
+			// Select figure
+			void select() {
+				this->is_selected = true;
+			}
+
+			// Deselect figure
+			void deselect() {
+				this->is_selected = false;
+			}
+
 			// Toggle visibility of the figure
 			void toggleVisibility() {
 				this->is_visible = !this->is_visible;
@@ -176,6 +191,11 @@ namespace Window {
 			// Toggle figure active
 			void toggleActive() {
 				this->is_active = !this->is_active;
+			}
+
+			// Toggle figure selection
+			void toggleSelect() {
+				this->is_selected = !this->is_selected;
 			}
 
 			/*!
@@ -219,6 +239,7 @@ namespace Window {
 			double angle;
 			bool is_visible;
 			bool is_active;
+			bool is_selected;
 
 			// Update the vertices position of the figure
 			void updateVertices() {
@@ -246,6 +267,7 @@ namespace Window {
 				this->next_order = 1;
 				this->active_figure = -1;
 				this->visible_elements = 0;
+				this->selected_figure = -1;
 			}
 			
 			~Scene() {
@@ -386,6 +408,22 @@ namespace Window {
 				}
 			}
 
+			void selectActiveFigure() {
+				this->checkFiguresLength();
+				
+				if (this->selected_figure == this->active_figure) {
+					this->selected_figure = -1;
+				} else {
+					if (this->selected_figure != -1) {
+						this->figures[this->selected_figure].deselect();
+					}
+					
+					this->selected_figure = this->active_figure;
+				}
+				
+				this->figures[this->active_figure].toggleSelect();
+			}
+
 		protected:
 			int width;
 			int height;
@@ -393,6 +431,7 @@ namespace Window {
 			int next_order;
 			int active_figure;
 			int visible_elements;
+			int selected_figure;
 			Window::Figure figures[Window::Scene::MAX_FIGURES];
 
 			// Throws error if the figures length == 0
@@ -456,13 +495,23 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 				Window::Figure figure = mainScene.getFigure(i);
 				HPEN active_pen = CreatePen(PS_SOLID, 5, RGB(255, 0, 0));
 				HPEN nonactive_pen = CreatePen(PS_SOLID, 1, RGB(255, 0, 0));
+				HPEN active_selected_pen = CreatePen(PS_SOLID, 5, RGB(0, 255, 0));
+				HPEN nonactive_selected_pen = CreatePen(PS_SOLID, 1, RGB(0, 255, 0));
 
 				if (figure.is_initialized) {
 					if (figure.isVisible()) {
 						if (figure.isActive()) {
-							SelectObject(hDC, active_pen);
+							if (figure.isSelected()) {
+								SelectObject(hDC, active_selected_pen);
+							} else {
+								SelectObject(hDC, active_pen);
+							}
 						} else {
-							SelectObject(hDC, nonactive_pen);
+							if (figure.isSelected()) {
+								SelectObject(hDC, nonactive_selected_pen);
+							} else {
+								SelectObject(hDC, nonactive_pen);
+							}
 						}
 
 						int vertices_count = figure.countVertices();
@@ -594,6 +643,20 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 				case VK_F5: {
 					try {
 						mainScene.rotateAllFigures(-Window::rotate_angle);
+					} catch (const std::exception& err) {
+						std::cout << err.what() << std::endl;
+					}
+
+					GetClientRect(hwnd, &rect);
+					InvalidateRect(hwnd, &rect, -1);
+					UpdateWindow(hwnd);
+
+					break;
+				}
+
+				case VK_SPACE: {
+					try {
+						mainScene.selectActiveFigure();
 					} catch (const std::exception& err) {
 						std::cout << err.what() << std::endl;
 					}
