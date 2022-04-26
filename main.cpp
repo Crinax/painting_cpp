@@ -372,6 +372,20 @@ namespace Window {
 				this->figures[active_figure_index].hide();
 			}
 
+			/*!
+				\brief Rotate all figures
+				\param [in] angle {How many radians the figures rotate by}
+			*/
+			void rotateAllFigures(double angle) {
+				this->checkFiguresLength();
+
+				for (int i = 0; i < Window::Scene::MAX_FIGURES; i++) {
+					if (this->figures[i].is_initialized) {
+						this->figures[i].rotate(angle);
+					}
+				}
+			}
+
 		protected:
 			int width;
 			int height;
@@ -504,7 +518,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 				}
 
 				case VK_F3: {
-					Window::Point center = { 200, 200 };
+					Window::Point center = { 300, 300 };
 					
 					try {
 						mainScene.newFigure(center, 50, 4, 0, true, true);
@@ -519,7 +533,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 					break;
 				}
 
-				case VK_F6: {
+				case VK_F4: {
 					Window::Point center = { 300, 300 };
 					
 					try {
@@ -552,6 +566,34 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 				case VK_F11: {
 					try {
 						mainScene.rotateActiveFigure(-Window::rotate_angle);
+					} catch (const std::exception& err) {
+						std::cout << err.what() << std::endl;
+					}
+
+					GetClientRect(hwnd, &rect);
+					InvalidateRect(hwnd, &rect, -1);
+					UpdateWindow(hwnd);
+
+					break;
+				}
+
+				case VK_F6: {
+					try {
+						mainScene.rotateAllFigures(Window::rotate_angle);
+					} catch (const std::exception& err) {
+						std::cout << err.what() << std::endl;
+					}
+
+					GetClientRect(hwnd, &rect);
+					InvalidateRect(hwnd, &rect, -1);
+					UpdateWindow(hwnd);
+
+					break;
+				}
+
+				case VK_F5: {
+					try {
+						mainScene.rotateAllFigures(-Window::rotate_angle);
 					} catch (const std::exception& err) {
 						std::cout << err.what() << std::endl;
 					}
