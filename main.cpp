@@ -29,7 +29,7 @@ namespace Window {
 
 	/*!
 		\brief Class for figures
-		\version 1.0.0
+		\version 1.3.0
 		\date 10.04.2022
 		\author Crinax
 	*/
@@ -229,6 +229,27 @@ namespace Window {
 				this->updateVertices();
 			}
 
+			/*!
+				\brief Rotate the figure around point
+				\param [in] point {The point around which the turn will be}
+				\param [in] angle {How many radians the figure rotate by}
+			*/
+			void rotateAround(Window::Point point, double angle) {
+				double distance = sqrt(
+					pow(point.x - this->coords.x, 2)
+					+ pow(point.y - this->coords.y, 2)
+				);
+
+				Window::Point new_coords = {
+					(int)(point.x - this->coords.x + distance * cos(this->angle)),
+					(int)(point.y - this->coords.y + distance * sin(this->angle)),
+				};
+
+				this->coords = new_coords;
+
+				this->updateVertices();
+			}
+
 		protected:
 			static const int MAX_VERTICES = 10;
 			Window::Point vertex[Window::Figure::MAX_VERTICES];
@@ -254,11 +275,9 @@ namespace Window {
 
 	/*!
 		\brief Scene class for defining figures and them management
-		\version 1.0.0
+		\version 1.4.0
 		\author Crinax
 		\date 10.04.2022
-		\bug Error when switching shapes
-		\todo Fix bug
 	*/
 	class Scene {
 		public:
@@ -408,6 +427,7 @@ namespace Window {
 				}
 			}
 
+			// Select active figure
 			void selectActiveFigure() {
 				this->checkFiguresLength();
 				
@@ -422,6 +442,23 @@ namespace Window {
 				}
 				
 				this->figures[this->active_figure].toggleSelect();
+			}
+
+			/*!
+				\brief Rotate figure around selected figure or around self
+				\param [in] angle {How many radians the figures rotate by}
+			*/
+			void rotateActiveFigureAroundSelected(double angle) {
+				this->checkFiguresLength();
+
+				if (this->selected_figure == this->active_figure || this->selected_figure == -1) {
+					this->figures[this->active_figure].rotate(angle);
+				} else {
+					this->figures[this->active_figure].rotateAround(
+						this->figures[this->selected_figure].getPosition(),
+						angle
+					);
+				}
 			}
 
 		protected:
@@ -643,6 +680,34 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 				case VK_F5: {
 					try {
 						mainScene.rotateAllFigures(-Window::rotate_angle);
+					} catch (const std::exception& err) {
+						std::cout << err.what() << std::endl;
+					}
+
+					GetClientRect(hwnd, &rect);
+					InvalidateRect(hwnd, &rect, -1);
+					UpdateWindow(hwnd);
+
+					break;
+				}
+
+				case VK_F7: {
+					try {
+						mainScene.rotateActiveFigureAroundSelected(Window::rotate_angle);
+					} catch (const std::exception& err) {
+						std::cout << err.what() << std::endl;
+					}
+
+					GetClientRect(hwnd, &rect);
+					InvalidateRect(hwnd, &rect, -1);
+					UpdateWindow(hwnd);
+
+					break;
+				}
+
+				case VK_F8: {
+					try {
+						mainScene.rotateActiveFigureAroundSelected(-Window::rotate_angle);
 					} catch (const std::exception& err) {
 						std::cout << err.what() << std::endl;
 					}
