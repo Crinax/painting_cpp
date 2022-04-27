@@ -241,9 +241,13 @@ namespace Window {
 				);
 
 				Window::Point new_coords = {
-					(int)(point.x - this->coords.x + distance * cos(this->angle)),
-					(int)(point.y - this->coords.y + distance * sin(this->angle)),
+					(int)((this->coords.x - point.x) * cos(angle) - (this->coords.y - point.y) * sin(angle) + point.x),
+					(int)((this->coords.x - point.x) * sin(angle) + (this->coords.y - point.y) * cos(angle) + point.y),
 				};
+
+				std::cout << "POINT => x: " << point.x << "; y: " << point.y << std::endl;
+				std::cout << "THIS => x: " << this->coords.x << "; y: " << this->coords.y << std::endl;
+				std::cout << "NEW => x: " << new_coords.x << "; y: " << new_coords.y << std::endl << std::endl;
 
 				this->coords = new_coords;
 
@@ -607,7 +611,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 					Window::Point center = { 300, 300 };
 					
 					try {
-						mainScene.newFigure(center, 50, 4, 0, true, true);
+						mainScene.newFigure(center, 50, 4, Window::pi / 4, true, true);
 					} catch (const std::exception& err) {
 						std::cout << err.what() << std::endl;
 					}
@@ -693,7 +697,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 
 				case VK_F7: {
 					try {
-						mainScene.rotateActiveFigureAroundSelected(Window::rotate_angle);
+						mainScene.rotateActiveFigureAroundSelected(-Window::rotate_angle);
 					} catch (const std::exception& err) {
 						std::cout << err.what() << std::endl;
 					}
@@ -707,7 +711,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 
 				case VK_F8: {
 					try {
-						mainScene.rotateActiveFigureAroundSelected(-Window::rotate_angle);
+						mainScene.rotateActiveFigureAroundSelected(Window::rotate_angle);
 					} catch (const std::exception& err) {
 						std::cout << err.what() << std::endl;
 					}
