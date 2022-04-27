@@ -465,9 +465,20 @@ namespace Window {
 				}
 			}
 
+			// Deleting all figures from sceen
+			void deleteAllFigures() {
+				this->next_index = 0;
+				this->next_order = 1;
+				this->active_figure = -1;
+				this->visible_elements = 0;
+				this->selected_figure = -1;
+
+				for (int i = 0; i < Window::Scene::MAX_FIGURES; i++) {
+					this->figures[i] = {};
+				}
+			}
+
 		protected:
-			int width;
-			int height;
 			int next_index;
 			int next_order;
 			int active_figure;
@@ -800,6 +811,20 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 						std::cout << err.what() << std::endl;
 					}
 					
+					GetClientRect(hwnd, &rect);
+					InvalidateRect(hwnd, &rect, -1);
+					UpdateWindow(hwnd);
+					
+					break;
+				}
+
+				case VK_BACK: {
+					try {
+						mainScene.deleteAllFigures();
+					} catch (const std::exception& err) {
+						std::cout << err.what() << std::endl;
+					}
+
 					GetClientRect(hwnd, &rect);
 					InvalidateRect(hwnd, &rect, -1);
 					UpdateWindow(hwnd);
