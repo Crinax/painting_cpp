@@ -245,10 +245,6 @@ namespace Window {
 					(int)((this->coords.x - point.x) * sin(angle) + (this->coords.y - point.y) * cos(angle) + point.y),
 				};
 
-				std::cout << "POINT => x: " << point.x << "; y: " << point.y << std::endl;
-				std::cout << "THIS => x: " << this->coords.x << "; y: " << this->coords.y << std::endl;
-				std::cout << "NEW => x: " << new_coords.x << "; y: " << new_coords.y << std::endl << std::endl;
-
 				this->coords = new_coords;
 
 				this->updateVertices();
@@ -463,6 +459,20 @@ namespace Window {
 						angle
 					);
 				}
+			}
+
+			/*!
+				\brief Rotate figure around point
+				\param [in] point {The point around which to turn}
+				\param [in] angle {How many radians the figures rotate by}
+			*/
+			void rotateActiveFigureAroundPoint(Window::Point point, double angle) {
+				this->checkFiguresLength();
+
+				this->figures[this->active_figure].rotateAround(
+					point,
+					angle
+				);
 			}
 
 			// Deleting all figures from sceen
@@ -842,6 +852,24 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 			
 			try {
 				mainScene.moveActiveFigureTo({ mouse_x, mouse_y });
+			} catch (const std::exception& err) {
+				std::cout << err.what() << std::endl;
+			}
+
+			GetClientRect(hwnd, &rect);
+			InvalidateRect(hwnd, &rect, -1);
+			UpdateWindow(hwnd);
+
+			break;
+		}
+
+		case WM_RBUTTONDOWN: {
+			int mouse_x = LOWORD(lParam);
+			int mouse_y = HIWORD(lParam);
+
+			try {
+				mainScene.rotateActiveFigure(Window::pi);
+				mainScene.rotateActiveFigureAroundPoint({ mouse_x, mouse_y }, Window::pi);
 			} catch (const std::exception& err) {
 				std::cout << err.what() << std::endl;
 			}
