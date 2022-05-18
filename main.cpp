@@ -72,6 +72,7 @@ namespace Window {
 				this->angle = angle;
 				this->is_visible = is_visible;
 				this->is_active = is_active;
+				this->is_selected = false;
 
 				this->updateVertices();
 
@@ -552,27 +553,38 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 
 		case WM_PAINT: {
 			hDC = BeginPaint(hwnd, &ps);
+			HPEN old_brush;
+			HPEN active_pen = CreatePen(PS_SOLID, 5, RGB(255, 0, 0));
+			HPEN nonactive_pen = CreatePen(PS_SOLID, 1, RGB(255, 0, 0));
+			HPEN active_selected_pen = CreatePen(PS_SOLID, 5, RGB(0, 0, 255));
+			HPEN nonactive_selected_pen = CreatePen(PS_SOLID, 1, RGB(0, 0, 255));
 			
 			for (int i = 0; i < Window::Scene::MAX_FIGURES; i++) {
 				Window::Figure figure = mainScene.getFigure(i);
-				HPEN active_pen = CreatePen(PS_SOLID, 5, RGB(255, 0, 0));
-				HPEN nonactive_pen = CreatePen(PS_SOLID, 1, RGB(255, 0, 0));
-				HPEN active_selected_pen = CreatePen(PS_SOLID, 5, RGB(0, 0, 255));
-				HPEN nonactive_selected_pen = CreatePen(PS_SOLID, 1, RGB(0, 0, 255));
+				// HBRUSH old_brush;
+				//  HPEN  old_pen;
+				// .....................................
+				// old_brush=(HBRUSH) SelectObject(hdc,brush);// выбрать кисть старое значение запомнить
+				// old_pen=(HPEN) SelectObject(hdc,pen); // выбрать перо старое значение запомнить
+				
+				// ......................................
+				//  SelectObject(hdc,old_brush); // восстановить старые значения 
+				//  SelectObject(hdc,old_pen);
+
 
 				if (figure.is_initialized) {
 					if (figure.isVisible()) {
 						if (figure.isActive()) {
 							if (figure.isSelected()) {
-								SelectObject(hDC, active_selected_pen);
+								old_brush = (HPEN)SelectObject(hDC, active_selected_pen);
 							} else {
-								SelectObject(hDC, active_pen);
+								old_brush = (HPEN)SelectObject(hDC, active_pen);
 							}
 						} else {
 							if (figure.isSelected()) {
-								SelectObject(hDC, nonactive_selected_pen);
+								old_brush = (HPEN)SelectObject(hDC, nonactive_selected_pen);
 							} else {
-								SelectObject(hDC, nonactive_pen);
+								old_brush = (HPEN)SelectObject(hDC, nonactive_pen);
 							}
 						}
 
@@ -587,6 +599,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 
 						LineTo(hDC, vertices[0].x, vertices[0].y);
 					}
+					
+					SelectObject(hDC, old_brush);
 				}
 			}
 
