@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <stdexcept>
+#include <vector>
 
 /*!
 	\brief Define namespace to avoid names conflict
@@ -29,7 +30,7 @@ namespace Window {
 
 	/*!
 		\brief Class for figures
-		\version 1.3.0
+		\version 1.4.0
 		\date 10.04.2022
 		\author Crinax
 	*/
@@ -49,16 +50,13 @@ namespace Window {
 				\param [in] coords {Coords of center of the figure}
 				\param [in] radius {Radius of circumscribed circle around the figure}
 				\param [in] angle {Angle of rotation of the figure}
-				\param [in] is_visible {Determines whether the figure will be drawn}
 				\param [in] is_active {Determines whether the shape is active}
 			*/
 			Figure(
 				int vertices_number,
 				Window::Point coords,
 				int radius,
-				int order,
 				double angle,
-				bool is_visible,
 				bool is_active
 			) {
 				if (vertices_number > Window::Figure::MAX_VERTICES) {
@@ -68,9 +66,7 @@ namespace Window {
 				this->vertices_number = vertices_number;
 				this->coords = coords;
 				this->radius = radius;
-				this->order = order;
 				this->angle = angle;
-				this->is_visible = is_visible;
 				this->is_active = is_active;
 				this->is_selected = false;
 
@@ -80,6 +76,7 @@ namespace Window {
 			}
 
 			bool is_initialized;
+			static const int MAX_VERTICES = 10;
 			
 			// Returns coors of center of the figure
 			Window::Point getPosition() {
@@ -89,11 +86,6 @@ namespace Window {
 			// Returns radius of circle
 			int getRadius() {
 				return this->radius;
-			}
-
-			// Returns order of figure
-			int getOrder() {
-				return this->order;
 			}
 			
 			// Returns angle of rotation of the figure
@@ -109,11 +101,6 @@ namespace Window {
 			// Returns number of vertices
 			int countVertices() {
 				return this->vertices_number;
-			}
-
-			// Returns true if this figure is visible
-			bool isVisible() {
-				return this->is_visible;
 			}
 
 			// Returns true if this figure is active
@@ -137,14 +124,6 @@ namespace Window {
 			}
 
 			/*!
-				\brief Set order of figure
-				\param [in] order {New order of the figure}
-			*/
-			void setOrder(int order) {
-				this->order = order;
-			}
-
-			/*!
 				\brief Set angle of rotation of the figure
 				\param [in] angle {New angle of rotation}
 			*/
@@ -152,16 +131,6 @@ namespace Window {
 				this->angle = angle;
 
 				this->updateVertices();
-			}
-
-			// Hide the figure from screen
-			void hide() {
-				this->is_visible = false;
-			}
-
-			// Show figure on the screen
-			void show() {
-				this->is_visible = true;
 			}
 
 			// Disable figure
@@ -182,11 +151,6 @@ namespace Window {
 			// Deselect figure
 			void deselect() {
 				this->is_selected = false;
-			}
-
-			// Toggle visibility of the figure
-			void toggleVisibility() {
-				this->is_visible = !this->is_visible;
 			}
 
 			// Toggle figure active
@@ -252,14 +216,11 @@ namespace Window {
 			}
 
 		protected:
-			static const int MAX_VERTICES = 10;
 			Window::Point vertex[Window::Figure::MAX_VERTICES];
 			int vertices_number;
 			Window::Point coords;
 			int radius;
-			int order;
 			double angle;
-			bool is_visible;
 			bool is_active;
 			bool is_selected;
 
@@ -276,32 +237,33 @@ namespace Window {
 
 	/*!
 		\brief Scene class for defining figures and them management
-		\version 1.4.0
+		\version 1.5.0
 		\author Crinax
 		\date 10.04.2022
 	*/
 	class Scene {
 		public:
 			Scene() {
-				this->next_index = 0;
-				this->next_order = 1;
+				this->element_count = 0;
 				this->active_figure = -1;
-				this->visible_elements = 0;
 				this->selected_figure = -1;
+				this->is_blocked = false;
+				this->active_figure_before_block = -1;
+				this->selected_figure_before_block = -1;
+				this->figures = {};
 			}
 			
 			~Scene() {
-				delete this->figures;
+				this->figures.clear();
+				this->figures.shrink_to_fit();
 			}
-
-			static const int MAX_FIGURES = 100;
 
 			/*!
 				\brief Returns the figure by index, if the index > max figures throws error
 				\param [in] index {Index of the figure}
 			*/
 			Figure getFigure(int index) {
-				if (index >= Window::Scene::MAX_FIGURES) {
+				if (index >= this->element_count) {
 					throw std::out_of_range("[ERR] Window::Scene: index greeter than max possible figures");
 				}
 
@@ -314,30 +276,22 @@ namespace Window {
 				\param [in] radius {Radius of circumscribed circle around the figure}
 				\param [in] vertices_number {Number of vertices of the figure (MAX_VERTICES=10)}
 				\param [in] angle {Angle of rotation of the figure}
-				\param [in] is_visible {Determines whether the figure will be drawn}
 				\param [in] is_active {Determines whether the shape is active}
 			*/
-			void newFigure(Point center, int radius, int vertices_number, double angle, bool is_visible, bool is_active) {
-				if (this->next_order >= 10) {
-					throw std::runtime_error("[ERR] Window::Scene::MAX_FIGURES: maximum 10 figures per screen");
-				}
-
-				this->figures[this->next_index] = {
+			void newFigure(Point center, int radius, int vertices_number, double angle, bool is_active) {
+				this->figures.push_back({
 					vertices_number,
 					center,
 					radius,
-					this->next_order,
 					angle,
-					is_visible,
 					is_active,
-				};
+				});
+				
 
-				this->disableFigures(this->next_order);
-				this->active_figure = this->next_index;
+				this->disableFigures(this->element_count);
+				this->active_figure = this->element_count;
 
-				this->visible_elements++;
-				this->next_index++;
-				this->next_order++;
+				this->element_count++;
 			}
 
 			/*!
@@ -346,6 +300,8 @@ namespace Window {
 			*/
 			void rotateActiveFigure(double angle) {
 				this->checkFiguresLength();
+				this->checkIsSceneBlocking();
+
 				this->figures[this->active_figure].rotate(angle);
 			}
 
@@ -356,20 +312,26 @@ namespace Window {
 			*/
 			void setPrevFigureAsActive() {
 				this->checkFiguresLength();
+				this->checkIsSceneBlocking();
+
 				this->figures[this->active_figure].disable();
+
 				this->decreaseActiveFigureIndex();
+
 				this->figures[this->active_figure].enable();
 			}
 
 			/*!
 				\brief Switch active figure to next
-				\bug Doesn't work correctly
-				\todo Fix the switching
 			*/
 			void setNextFigureAsActive() {
 				this->checkFiguresLength();
+				this->checkIsSceneBlocking();
+
 				this->figures[this->active_figure].disable();
+
 				this->increaseActiveFigureIndex();
+
 				this->figures[this->active_figure].enable();
 			}
 
@@ -379,12 +341,31 @@ namespace Window {
 			*/
 			void moveActiveFigureTo(Window::Point point) {
 				this->checkFiguresLength();
+				this->checkIsSceneBlocking();
+
 				this->figures[this->active_figure].moveTo(point);
+			}
+
+			/*!
+				\brief Move the active figure to selected
+				\param [in] point {What point to move the figure to}
+			*/
+			void moveActiveFigureToSelected() {
+				this->checkFiguresLength();
+				this->checkIsSceneBlocking();
+
+				if (this->selected_figure == -1) {
+					throw std::runtime_error("[ERR] Window::Scene: No selected figures");
+				}
+
+				this->figures[this->active_figure].moveTo(this->figures[this->selected_figure].getPosition());
 			}
 
 			// Increase the active figure radius by 1
 			void increaseActiveFigureRadius() {
 				this->checkFiguresLength();
+				this->checkIsSceneBlocking();
+
 				this->figures[this->active_figure].scale(1);
 			}
 
@@ -394,24 +375,27 @@ namespace Window {
 				this->figures[this->active_figure].scale(-1);
 			}
 
-			// Hide active figure with switching active figure to previous
-			void hideActiveFigure() {
+			// Delete active figure with switching active figure to previous
+			void deleteActiveFigure() {
 				this->checkFiguresLength();
+				this->checkIsSceneBlocking();
 
-				int active_figure_index = this->active_figure;
+				this->element_count--;
+				this->figures.erase(this->figures.begin() + this->active_figure);
 
-				this->setPrevFigureAsActive();
-
-				if (active_figure_index == this->active_figure) {
-					this->figures[this->active_figure].hide();
-					
-					this->active_figure = -1;
+				if (this->active_figure == this->element_count) {
+					this->active_figure--;
+				}
+				
+				if (this->active_figure == 0) {
+					this->active_figure = this->element_count - 1;
 				}
 
-				this->next_index--;
-				this->next_order--;
-				this->visible_elements--;
-				this->figures[active_figure_index].hide();
+				if (this->active_figure == this->selected_figure) {
+					this->selected_figure = -1;
+				}
+
+				this->figures[this->active_figure].enable();
 			}
 
 			/*!
@@ -420,8 +404,9 @@ namespace Window {
 			*/
 			void rotateAllFigures(double angle) {
 				this->checkFiguresLength();
+				this->checkIsSceneBlocking();
 
-				for (int i = 0; i < Window::Scene::MAX_FIGURES; i++) {
+				for (int i = 0; i < this->element_count; i++) {
 					if (this->figures[i].is_initialized) {
 						this->figures[i].rotate(angle);
 					}
@@ -431,6 +416,7 @@ namespace Window {
 			// Select active figure
 			void selectActiveFigure() {
 				this->checkFiguresLength();
+				this->checkIsSceneBlocking();
 				
 				if (this->selected_figure == this->active_figure) {
 					this->selected_figure = -1;
@@ -451,6 +437,7 @@ namespace Window {
 			*/
 			void rotateActiveFigureAroundSelected(double angle) {
 				this->checkFiguresLength();
+				this->checkIsSceneBlocking();
 
 				if (this->selected_figure == this->active_figure || this->selected_figure == -1) {
 					this->figures[this->active_figure].rotate(angle);
@@ -469,6 +456,7 @@ namespace Window {
 			*/
 			void rotateActiveFigureAroundPoint(Window::Point point, double angle) {
 				this->checkFiguresLength();
+				this->checkIsSceneBlocking();
 
 				this->figures[this->active_figure].rotateAround(
 					point,
@@ -478,30 +466,121 @@ namespace Window {
 
 			// Deleting all figures from sceen
 			void deleteAllFigures() {
-				this->next_index = 0;
-				this->next_order = 1;
+				this->element_count = 0;
 				this->active_figure = -1;
-				this->visible_elements = 0;
 				this->selected_figure = -1;
 
-				for (int i = 0; i < Window::Scene::MAX_FIGURES; i++) {
-					this->figures[i] = {};
+				this->figures.clear();
+			}
+
+			void lockScene() {
+				this->checkFiguresLength();
+
+				this->figures[active_figure].disable();
+
+				if (this->selected_figure != -1) {
+					this->figures[this->selected_figure].deselect();
+				}
+				
+				this->active_figure_before_block = this->active_figure;
+				this->selected_figure_before_block = this->selected_figure;
+				this->active_figure = -1;
+				this->selected_figure = -1;
+				this->is_blocked = true;
+			}
+
+			void unlockScene() {
+				this->checkFiguresLength();
+
+				this->active_figure = this->active_figure_before_block;
+				this->selected_figure = this->selected_figure_before_block;
+				this->active_figure_before_block = -1;
+				this->selected_figure_before_block = -1;
+				this->is_blocked = false;
+			}
+
+			void restoreAfterBlocking() {
+				for (int i = 0; i < this->element_count; i++) {
+					if (this->figures[i].isActive()) {
+						this->figures[i].disable();
+					}
+				}
+
+				this->figures[this->active_figure].enable();
+
+				if (this->selected_figure != -1) {
+					this->figures[this->selected_figure].select();
 				}
 			}
 
+			void setLargestFigureAsActiveByVerticesCount(int vertices_count) {
+				this->checkFiguresLength();
+
+				int figure_index = this->getLargeFigureByVerticesCount(vertices_count);
+
+				if (figure_index != -1) {
+					this->figures[figure_index].enable();
+				}
+			}
+
+			void setAllLargestFigureAsActive() {
+				this->checkFiguresLength();
+
+				for (int i = 3; i <= Window::Figure::MAX_VERTICES; i++) {
+					this->setLargestFigureAsActiveByVerticesCount(i);
+				}
+			}
+
+			bool isBlocked() {
+				return this->is_blocked;
+			}
+
+			int countElements() {
+				return this->element_count;
+			}
+
 		protected:
-			int next_index;
-			int next_order;
+			int element_count;
 			int active_figure;
-			int visible_elements;
 			int selected_figure;
-			Window::Figure figures[Window::Scene::MAX_FIGURES];
+			bool is_blocked;
+			int active_figure_before_block;
+			int selected_figure_before_block;
+			std::vector<Window::Figure> figures;
 
 			// Throws error if the figures length == 0
 			void checkFiguresLength() {
-				if (this->active_figure < 0) {
+				if (this->element_count < 1) {
 					throw std::runtime_error("[ERR] Window::Scene: No figures to do this action");
 				}
+			}
+
+			void checkIsSceneBlocking() {
+				if (this->is_blocked) {
+					throw std::runtime_error("[ERR] Window::Scene: Scene was blocked");
+				}
+			}
+
+			int getLargeFigureByVerticesCount(int vertices_count) {
+				this->checkFiguresLength();
+
+				int large_figure_index = 0;
+				bool large_figure_was_found = false;
+
+				for (int i = 0; i < this->element_count; i++) {
+					if (this->figures[i].countVertices() == vertices_count) {
+						if (this->figures[large_figure_index].getRadius() <= this->figures[i].getRadius()) {
+							large_figure_index = i;
+							large_figure_was_found = true;
+						}
+					}
+				}
+
+				if (large_figure_was_found) {
+					return large_figure_index;
+				}
+
+				return -1;
 			}
 
 			/*!
@@ -509,18 +588,16 @@ namespace Window {
 				\param [in] index {Index of the figure}
 			*/
 			void disableFigures(int order) {
-				for (int i = 0; i < this->next_index; i++) {
+				for (int i = 0; i < this->element_count; i++) {
 					if (this->figures[i].is_initialized) {
-						if (this->figures[i].getOrder() != i) {
-							this->figures[i].disable();
-						}
+						this->figures[i].disable();
 					}
 				}
 			}
 
 			// Increase active figure index
 			void increaseActiveFigureIndex() {
-				if (this->active_figure == this->next_index - 1) {
+				if (this->active_figure == this->element_count - 1) {
 					this->active_figure = 0;
 				} else {
 					this->active_figure++;
@@ -530,7 +607,7 @@ namespace Window {
 			// Decrease active figure index
 			void decreaseActiveFigureIndex() {
 				if (this->active_figure == 0) {
-					this->active_figure = this->next_index - 1;
+					this->active_figure = this->element_count - 1;
 				} else {
 					this->active_figure--;
 				}
@@ -559,49 +636,39 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 			HPEN active_selected_pen = CreatePen(PS_SOLID, 5, RGB(0, 0, 255));
 			HPEN nonactive_selected_pen = CreatePen(PS_SOLID, 1, RGB(0, 0, 255));
 			
-			for (int i = 0; i < Window::Scene::MAX_FIGURES; i++) {
-				Window::Figure figure = mainScene.getFigure(i);
-				// HBRUSH old_brush;
-				//  HPEN  old_pen;
-				// .....................................
-				// old_brush=(HBRUSH) SelectObject(hdc,brush);// выбрать кисть старое значение запомнить
-				// old_pen=(HPEN) SelectObject(hdc,pen); // выбрать перо старое значение запомнить
-				
-				// ......................................
-				//  SelectObject(hdc,old_brush); // восстановить старые значения 
-				//  SelectObject(hdc,old_pen);
+			int element_count = mainScene.countElements();
 
+			for (int i = 0; i < element_count; i++) {
+				Window::Figure figure = mainScene.getFigure(i);
 
 				if (figure.is_initialized) {
-					if (figure.isVisible()) {
-						if (figure.isActive()) {
-							if (figure.isSelected()) {
-								old_brush = (HPEN)SelectObject(hDC, active_selected_pen);
-							} else {
-								old_brush = (HPEN)SelectObject(hDC, active_pen);
-							}
+					if (figure.isActive()) {
+						if (figure.isSelected()) {
+							old_brush = (HPEN)SelectObject(hDC, active_selected_pen);
 						} else {
-							if (figure.isSelected()) {
-								old_brush = (HPEN)SelectObject(hDC, nonactive_selected_pen);
-							} else {
-								old_brush = (HPEN)SelectObject(hDC, nonactive_pen);
-							}
+							old_brush = (HPEN)SelectObject(hDC, active_pen);
 						}
-
-						int vertices_count = figure.countVertices();
-						Window::Point* vertices = figure.getVertices();
-
-						MoveToEx(hDC, vertices[0].x, vertices[0].y, NULL);
-						
-						for (int i = 1; i < vertices_count; i++) {
-							LineTo(hDC, vertices[i].x, vertices[i].y);
+					} else {
+						if (figure.isSelected()) {
+							old_brush = (HPEN)SelectObject(hDC, nonactive_selected_pen);
+						} else {
+							old_brush = (HPEN)SelectObject(hDC, nonactive_pen);
 						}
-
-						LineTo(hDC, vertices[0].x, vertices[0].y);
 					}
+
+					int vertices_count = figure.countVertices();
+					Window::Point* vertices = figure.getVertices();
+
+					MoveToEx(hDC, vertices[0].x, vertices[0].y, NULL);
 					
-					SelectObject(hDC, old_brush);
+					for (int i = 1; i < vertices_count; i++) {
+						LineTo(hDC, vertices[i].x, vertices[i].y);
+					}
+
+					LineTo(hDC, vertices[0].x, vertices[0].y);
 				}
+				
+				SelectObject(hDC, old_brush);
 			}
 
 			EndPaint(hwnd, &ps);
@@ -614,7 +681,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 					Window::Point center = { 100, 100 };
 					
 					try {
-						mainScene.newFigure(center, 50, 3, Window::pi, true, true);
+						mainScene.newFigure(center, 50, 3, Window::pi, true);
 					} catch (const std::exception& err) {
 						std::cout << err.what() << std::endl;
 					}
@@ -630,7 +697,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 					Window::Point center = { 200, 200 };
 					
 					try {
-						mainScene.newFigure(center, 50, 4, Window::pi, true, true);
+						mainScene.newFigure(center, 50, 4, Window::pi, true);
 					} catch (const std::exception& err) {
 						std::cout << err.what() << std::endl;
 					}
@@ -646,7 +713,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 					Window::Point center = { 300, 300 };
 					
 					try {
-						mainScene.newFigure(center, 50, 4, Window::pi / 4, true, true);
+						mainScene.newFigure(center, 50, 4, Window::pi / 4, true);
 					} catch (const std::exception& err) {
 						std::cout << err.what() << std::endl;
 					}
@@ -662,7 +729,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 					Window::Point center = { 300, 300 };
 					
 					try {
-						mainScene.newFigure(center, 50, 6, 0, true, true);
+						mainScene.newFigure(center, 50, 6, 0, true);
 					} catch (const std::exception& err) {
 						std::cout << err.what() << std::endl;
 					}
@@ -758,6 +825,26 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 					break;
 				}
 
+				case VK_F9: {
+					try {
+						if (mainScene.isBlocked()) {
+							mainScene.unlockScene();
+							mainScene.restoreAfterBlocking();
+						} else {
+							mainScene.lockScene();
+							mainScene.setAllLargestFigureAsActive();
+						}
+					} catch (const std::exception& err) {
+						std::cout << err.what() << std::endl;
+					}
+
+					GetClientRect(hwnd, &rect);
+					InvalidateRect(hwnd, &rect, -1);
+					UpdateWindow(hwnd);
+
+					break;
+				}
+
 				case VK_SPACE: {
 					try {
 						mainScene.selectActiveFigure();
@@ -830,7 +917,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 
 				case VK_DELETE: {
 					try {
-						mainScene.hideActiveFigure();
+						mainScene.deleteActiveFigure();
 					} catch (const std::exception& err) {
 						std::cout << err.what() << std::endl;
 					}
@@ -866,6 +953,20 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) 
 			
 			try {
 				mainScene.moveActiveFigureTo({ mouse_x, mouse_y });
+			} catch (const std::exception& err) {
+				std::cout << err.what() << std::endl;
+			}
+
+			GetClientRect(hwnd, &rect);
+			InvalidateRect(hwnd, &rect, -1);
+			UpdateWindow(hwnd);
+
+			break;
+		}
+
+		case WM_MBUTTONDOWN: {
+			try {
+				mainScene.moveActiveFigureToSelected();
 			} catch (const std::exception& err) {
 				std::cout << err.what() << std::endl;
 			}
